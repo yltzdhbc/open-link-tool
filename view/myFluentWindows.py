@@ -2,60 +2,56 @@
 from typing import Union
 import sys
 
+from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt, QSize, QRect
 from PyQt5.QtGui import QIcon, QPainter, QColor
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QApplication
-
-from qfluentwidgets.common.config import qconfig
+from PyQt5.QtWidgets import (
+    QWidget,
+    QHBoxLayout,
+    QVBoxLayout,
+    QLabel,
+    QApplication,
+    QPushButton,
+)
 
 from qfluentwidgets.common.config import qconfig
 from qfluentwidgets.common.icon import FluentIconBase
 from qfluentwidgets.common.router import qrouter
-from qfluentwidgets.common.style_sheet import FluentStyleSheet, isDarkTheme, setTheme, Theme
+from qfluentwidgets.common.style_sheet import (
+    FluentStyleSheet,
+    isDarkTheme,
+    setTheme,
+    Theme,
+)
 from qfluentwidgets.common.animation import BackgroundAnimationWidget
 from qfluentwidgets.components.widgets.frameless_window import FramelessWindow
-# from ..components.widgets.frameless_window import FramelessWindow
-from qfluentwidgets.components.navigation import (NavigationInterface, NavigationBar, NavigationItemPosition,
-                                     NavigationBarPushButton, NavigationTreeWidget)
-# from .stacked_widget import StackedWidget
-
+from qfluentwidgets.components.navigation import (
+    NavigationInterface,
+    NavigationBar,
+    NavigationItemPosition,
+    NavigationBarPushButton,
+    NavigationTreeWidget,
+)
 from qframelesswindow import TitleBar, TitleBarBase
-
-from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QPushButton
-
-from qfluentwidgets.window.fluent_window import FluentWindowBase
-from qfluentwidgets.window.fluent_window import FluentTitleBar
-from PyQt5 import QtCore, QtGui, QtWidgets
-from qfluentwidgets import BodyLabel, CardWidget, ComboBox, IconWidget, LargeTitleLabel,PushButton, RadioButton, StrongBodyLabel, SubtitleLabel, TransparentToolButton, TogglePushButton
+from qfluentwidgets.window.fluent_window import FluentWindowBase, FluentTitleBar
+from qfluentwidgets import (
+    BodyLabel,
+    CardWidget,
+    ComboBox,
+    IconWidget,
+    LargeTitleLabel,
+    PushButton,
+    RadioButton,
+    StrongBodyLabel,
+    SubtitleLabel,
+    TransparentToolButton,
+    TogglePushButton,
+)
 import resource_rc
 
-# class myComboBox(ComboBox):
-#     def showPopup(self):
-#         self.parent().update_serial_ports()  # 在下拉菜单显示前更新串口列表
-#         super().showPopup()  # 调用基类方法显示下拉列表
-
-# class ToggleToolButton(ToolButton):
-#     """ Toggle tool button
-
-#     Constructors
-#     ------------
-#     * ToggleToolButton(`parent`: QWidget = None)
-#     * ToggleToolButton(`icon`: QIcon | str | FluentIconBase, `parent`: QWidget = None)
-#     """
-
-#     def _postInit(self):
-#         self.setCheckable(True)
-#         self.setChecked(False)
-
-#     def _drawIcon(self, icon, painter, rect):
-#         if not self.isChecked():
-#             return ToolButton._drawIcon(self, icon, painter, rect)
-
-#         PrimaryToolButton._drawIcon(self, icon, painter, rect, QIcon.On)
-        
 
 class myFluentWindow(FluentWindowBase):
-    """ Fluent window """
+    """Fluent window"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -69,10 +65,12 @@ class myFluentWindow(FluentWindowBase):
         # 竖直布局中添加导航栏
         self.mySerialLayout.addWidget(self.navigationInterface)
         # 接着添加按钮组
-        
-        spacerItem11 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+
+        spacerItem11 = QtWidgets.QSpacerItem(
+            20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum
+        )
         self.mySerialLayout.addItem(spacerItem11)
-        
+
         _translate = QtCore.QCoreApplication.translate
         self.gridLayout_serial = QtWidgets.QGridLayout()
         self.gridLayout_serial.setObjectName("gridLayout_serial")
@@ -90,17 +88,17 @@ class myFluentWindow(FluentWindowBase):
         self.comboBoxSerial.setObjectName("comboBoxSerial")
         self.gridLayout_serial.addWidget(self.comboBoxSerial, 1, 0, 1, 1)
         self.mySerialLayout.addLayout(self.gridLayout_serial)
-        
+
         # self.labelSerialSelected = BodyLabel("已选择")
         # self.labelSerialSelected.setTextColor(QColor(0, 0, 255), QColor(255, 255, 255))  # 浅色主题，深色主题
         # self.labelSerialSelected.setObjectName("labelSerialSelected")
         # self.gridLayout_serial.addWidget(self.labelSerialSelected, 0, 1, 1, 1)
-        
-        
 
-        spacerItem12 = QtWidgets.QSpacerItem(20, 20, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        spacerItem12 = QtWidgets.QSpacerItem(
+            20, 20, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed
+        )
         self.mySerialLayout.addItem(spacerItem12)
-        
+
         # self.gridLayout_4 = QtWidgets.QGridLayout()
         # self.gridLayout_4.setObjectName("gridLayout_4")
         # self.radioButtonWifi = RadioButton()
@@ -115,7 +113,7 @@ class myFluentWindow(FluentWindowBase):
         # self.mySerialLayout.addLayout(self.gridLayout_4)
         # self.radioButtonWifi.setText(_translate("SeetingsInterface", "WIFI"))
         # self.pushButtonWifi.setText(_translate("SeetingsInterface", "打开"))
-        
+
         # 将自己的竖直的布局添加到大的框架中
         self.hBoxLayout.addLayout(self.mySerialLayout)
 
@@ -125,13 +123,20 @@ class myFluentWindow(FluentWindowBase):
 
         self.widgetLayout.addWidget(self.stackedWidget)
         self.widgetLayout.setContentsMargins(0, 48, 0, 0)
-        
+
         self.navigationInterface.displayModeChanged.connect(self.titleBar.raise_)
         self.titleBar.raise_()
 
-    def addSubInterface(self, interface: QWidget, icon: Union[FluentIconBase, QIcon, str], text: str,
-                        position=NavigationItemPosition.TOP, parent=None, isTransparent=False) -> NavigationTreeWidget:
-        """ add sub interface, the object name of `interface` should be set already
+    def addSubInterface(
+        self,
+        interface: QWidget,
+        icon: Union[FluentIconBase, QIcon, str],
+        text: str,
+        position=NavigationItemPosition.TOP,
+        parent=None,
+        isTransparent=False,
+    ) -> NavigationTreeWidget:
+        """add sub interface, the object name of `interface` should be set already
         before calling this method
 
         Parameters
@@ -171,7 +176,7 @@ class myFluentWindow(FluentWindowBase):
             onClick=lambda: self.switchTo(interface),
             position=position,
             tooltip=text,
-            parentRouteKey=parent.objectName() if parent else None
+            parentRouteKey=parent.objectName() if parent else None,
         )
 
         # initialize selected item
@@ -186,4 +191,4 @@ class myFluentWindow(FluentWindowBase):
 
     def resizeEvent(self, e):
         self.titleBar.move(46, 0)
-        self.titleBar.resize(self.width()-46, self.titleBar.height())
+        self.titleBar.resize(self.width() - 46, self.titleBar.height())
