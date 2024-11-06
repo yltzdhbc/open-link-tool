@@ -14,17 +14,19 @@ from view.firmware_upgrade_interface import FirmwareUpgradeInterface
 from view.myFluentWindows import myFluentWindow
 import serial.tools.list_ports
 
-# from lib_open_protocol.open_protocol_tool import MainFunc
 import logging, serial
 from lib_open_protocol.open_protocol import OpenProto
 from lib_open_protocol.upgrade import Upgrade, ModuleInfoStruct
-
+import os
 
 LOCAL_ADDR = 0x0103
 
 
-class MainFunc:
-    def __init__(self):
+class WorkerThread(QThread):
+    update_signal = pyqtSignal(list)
+
+    def __init__(self, firmwareUpgradeInterface):
+        super().__init__()
         loglevel = logging.DEBUG
         logging.basicConfig(level=loglevel, format="%(message)s", datefmt="%S")
         self.port = None
@@ -36,7 +38,18 @@ class MainFunc:
         self.sn = 0
         self.upgrade_t = None
         self.upgrade_monitor_flag = 0
-        self.upgrade = None
+        self.query_enable = False
+        self.download_enable = False
+        self.modules = None
+        self.firmwareUpgradeInterface = firmwareUpgradeInterface
+
+    def run(self):
+        while True:
+            if self.query_enable:
+                self.serial_query_module()
+            elif self.download_enable == True:
+                self.download()
+            time.sleep(2)
 
     def to_query(self):
         try:
@@ -60,6 +73,8 @@ class MainFunc:
             proto = OpenProto(self.port, self.baud, LOCAL_ADDR, logging)
             # 查版本
             self.upgrade = Upgrade(proto, logging)
+            # 绑定upgrade内的信号到本类中的函数，设置进度条
+            self.upgrade.upgrade_progress_signal.connect(self.recv_progress_val)
             module = ModuleInfoStruct(0, 0, self.hwid, self.sn, self.dst_addr)
             # 下载固件
             self.upgrade.load_firmware(self.fw_path)
@@ -78,32 +93,31 @@ class MainFunc:
             self.upgrade_monitor_flag = -1
             return
 
-
-class WorkerThread(QThread):
-    update_signal = pyqtSignal(list)
-
-    def __init__(self):
-        super().__init__()
-        self.main_func_serial = MainFunc()
-        self.query_enable = False
-
-    def run(self):
-        while True:
-            if self.query_enable:
-                self.serial_query_module()
-            time.sleep(2)
+    def download(self):
+        module = self.modules[0]
+        logging.debug("Upgrade: Select module %d/%d" % (self.selected_idx + 1, len(self.modules)))
+        logging.debug(
+            "Upgrade: Select Addr:0x%04x, APP:0x%08x, BL:0x%08x, HWID:%s,%s, "
+            % (module.addr, module.app_ver, module.loader_ver, module.hw_id, module.sn)
+        )
+        self.fw_path = "./firmwares/glazer-maker-main-app-v10.0.0.1.bin"
+        self.hwid = module.hw_id
+        self.sn = module.sn
+        self.dst_addr = module.addr
+        self.to_upgrade()
+        self.download_enable = False
 
     def serial_query_module(self):
         print("update_module_list")
-        modules = self.main_func_serial.to_query()
-        if len(modules):
-            self.update_signal.emit(modules)
+        self.modules = self.to_query()
+        if len(self.modules):
+            self.update_signal.emit(self.modules)
 
     @pyqtSlot(str)
     def send_serial_port(self, message):
         """子线程接收主线程的信号并处理"""
         print(f"子线程收到消息: {message}")
-        self.main_func_serial.port = message
+        self.port = message
 
     @pyqtSlot(str)
     def start_or_stop_query(self, message):
@@ -113,11 +127,31 @@ class WorkerThread(QThread):
         else:
             self.query_enable = False
 
+    @pyqtSlot(str)
+    def start_download(self, message):
+        print(f"子线程收到消息: {message}")
+        self.selected_idx = 0
+        if message == "Glazer-Module-1":
+            self.selected_idx = 0
+        elif message == "Glazer-Module-2":
+            self.selected_idx = 1
+        else:
+            selected_idx = 2
+        self.query_enable = False
+        self.download_enable = True
+
+    @pyqtSlot(float)
+    def recv_progress_val(self, float_val):
+        """子线程接收主线程的信号并处理"""
+        int_val = int(float_val * 100)
+        print(f"子线程收到消息: {float_val}")
+        self.firmwareUpgradeInterface.node.set_progress(1, int(float_val * 100))
+
 
 class Window(myFluentWindow):
     # 创建信号
     send_serial_port_signal = pyqtSignal(str)
-    stop_query_signal = pyqtSignal(str)
+    start_stop_query_signal = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
@@ -139,15 +173,17 @@ class Window(myFluentWindow):
         self.worker_thread = None
         self.start_task()
 
+        self.firmwareUpgradeInterface.node.button_download_signal.connect(self.worker_thread.start_download)
+
     def start_task(self):
         """启动工作线程"""
         if self.worker_thread is None or not self.worker_thread.isRunning():
-            self.worker_thread = WorkerThread()
+            self.worker_thread = WorkerThread(self.firmwareUpgradeInterface)
             # 连接子线程的信号到主线程的槽函数
             self.worker_thread.update_signal.connect(self.update_module_lists)  # 连接信号
             # 连接主线程的信号到子线程的槽函数
             self.send_serial_port_signal.connect(self.worker_thread.send_serial_port)
-            self.stop_query_signal.connect(self.worker_thread.start_or_stop_query)
+            self.start_stop_query_signal.connect(self.worker_thread.start_or_stop_query)
             self.worker_thread.start()  # 启动线程
 
     def stop_task(self):
@@ -171,11 +207,11 @@ class Window(myFluentWindow):
                 self.serial_is_open = True
                 self.pushButtonSerial.setText("关闭")  # 打开成功，设置按钮文字为“关闭”
                 self.select_port()
-                self.stop_query_signal.emit("start")
+                self.start_stop_query_signal.emit("start")
         else:  # 按下关闭串口
             self.serial_is_open = False
             self.pushButtonSerial.setText("打开")
-            self.stop_query_signal.emit("stop")
+            self.start_stop_query_signal.emit("stop")
             print(f"已关闭串口")
 
     def check_serial_port(self):

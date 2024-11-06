@@ -120,107 +120,107 @@ def start_print():
     sys.stdout.write("          | $$                                                              \r\n")
     sys.stdout.write("           \$$                                                              \r\n")
 
-# def main(args):
+def main(args):
 
-#     start_print()
-
-
-#     options = parserFunc(args)
-
-#     loglevel = logging.WARNING
-#     if (options.debug):
-#         loglevel = logging.DEBUG
-
-#     # logging.basicConfig(
-#     #     level=loglevel, format='%(asctime)-8s [%(levelname)s]: %(message)s', datefmt='%H:%M:%S')
-#     logging.basicConfig(level=loglevel, 
-#                         format='%(message)s', 
-#                         datefmt='%S')
-
-#     logging.debug("Options: %s", str(options))
-
-#     if (not options.port or not options.fw_path):
-#         logging.critical("Not enough arguments.")
-#         return 1
-
-#     logging.debug("--------------------------------------------------------------------------------------------------")
-
-#     # # --------------------------------------------------------
-#     # # 发送重启进入loader的指令，让目标开发板进入bootloader再进入升级
-#     # if options.reset == True:
-#     #     ser = serial.Serial(options.port, options.baud, 8, 'N', 1)
-#     #     if ser.is_open:
-#     #         logging.debug("Reset board to bootloader ...")        
-#     #         ser.write(b'\xaa\x55')
-#     #         time.sleep( 0.5 )
-#     #         ser.close()
-#     #     else:
-#     #         logging.critical("Serial open error!!!")
-#     #     time.sleep( 0.1 )
-#     # # --------------------------------------------------------
-
-#     main_func = MainFunc(options)
-
-#     select_addr = 0
-#     test_mode = 0
-
-#     while True:
-#         ret = main_func.to_query()
-#         x = input("Input your choose: Download all[y], exit[n], retry[r]:, mannul[m]: ")
-#         if x=="y":
-#             break
-#         elif x== "n":
-#             return 0
-#         elif x=="r":
-#             continue
-#         # elif x > '210' and x < '220':
-#         elif x=="m":
-#             test_mode = 1
-#             select_addr = 0x109
-#             break
-#         else:
-#             break
-
-#     if ret == True:
-#         update_main_time1 = time.time()
-
-#         select_cnt = 0
-#         retry_times = 0
-#         num_of_modules = len(main_func.quired_modules)
-#         while select_cnt < num_of_modules:
-#             module = main_func.quired_modules[select_cnt]
-#             logging.debug("Upgrade: Select module %d/%d" % (select_cnt+1,len(main_func.quired_modules)))
-
-#             if test_mode == 1 and (select_addr != module.addr):
-#                 select_cnt +=1
-#                 continue
-
-#             logging.debug("Upgrade: Select Addr:0x%04x, APP:0x%08x, BL:0x%08x, HWID:%s,%s, " 
-#                 % (module.addr, module.app_ver, module.loader_ver, module.hw_id, module.sn))
-#             main_func.hwid = module.hw_id
-#             main_func.sn = module.sn
-#             main_func.dst_addr = module.addr
-#             main_func.to_upgrade()
-
-#             if main_func.upgrade_monitor_flag != -1:
-#                 select_cnt +=1
-#                 time.sleep(3)
-#             else:
-#                 retry_times += 1
-#                 if(retry_times >= 1):
-#                     break
-#                 logging.debug("one more try")
-#                 time.sleep(2)
-#     else:
-#         logging.debug(
-#             "Failed to query the development board and is about to exit")
+    start_print()
 
 
-#     update_main_time2 = time.time()
-#     logging.debug("--------------------------------------------------------------------------------------------------")
-#     logging.debug("Upgrade: Finish, all use time:%.4fs" % (update_main_time2 - update_main_time1))
+    options = parserFunc(args)
 
-#     return 0
+    loglevel = logging.WARNING
+    if (options.debug):
+        loglevel = logging.DEBUG
+
+    # logging.basicConfig(
+    #     level=loglevel, format='%(asctime)-8s [%(levelname)s]: %(message)s', datefmt='%H:%M:%S')
+    logging.basicConfig(level=loglevel, 
+                        format='%(message)s', 
+                        datefmt='%S')
+
+    logging.debug("Options: %s", str(options))
+
+    if (not options.port or not options.fw_path):
+        logging.critical("Not enough arguments.")
+        return 1
+
+    logging.debug("--------------------------------------------------------------------------------------------------")
+
+    # # --------------------------------------------------------
+    # # 发送重启进入loader的指令，让目标开发板进入bootloader再进入升级
+    # if options.reset == True:
+    #     ser = serial.Serial(options.port, options.baud, 8, 'N', 1)
+    #     if ser.is_open:
+    #         logging.debug("Reset board to bootloader ...")        
+    #         ser.write(b'\xaa\x55')
+    #         time.sleep( 0.5 )
+    #         ser.close()
+    #     else:
+    #         logging.critical("Serial open error!!!")
+    #     time.sleep( 0.1 )
+    # # --------------------------------------------------------
+
+    main_func = MainFunc(options)
+
+    select_addr = 0
+    test_mode = 0
+
+    while True:
+        ret = main_func.to_query()
+        x = input("Input your choose: Download all[y], exit[n], retry[r]:, mannul[m]: ")
+        if x=="y":
+            break
+        elif x== "n":
+            return 0
+        elif x=="r":
+            continue
+        # elif x > '210' and x < '220':
+        elif x=="m":
+            test_mode = 1
+            select_addr = 0x109
+            break
+        else:
+            break
+
+    if ret == True:
+        update_main_time1 = time.time()
+
+        select_cnt = 0
+        retry_times = 0
+        num_of_modules = len(main_func.quired_modules)
+        while select_cnt < num_of_modules:
+            module = main_func.quired_modules[select_cnt]
+            logging.debug("Upgrade: Select module %d/%d" % (select_cnt+1,len(main_func.quired_modules)))
+
+            if test_mode == 1 and (select_addr != module.addr):
+                select_cnt +=1
+                continue
+
+            logging.debug("Upgrade: Select Addr:0x%04x, APP:0x%08x, BL:0x%08x, HWID:%s,%s, " 
+                % (module.addr, module.app_ver, module.loader_ver, module.hw_id, module.sn))
+            main_func.hwid = module.hw_id
+            main_func.sn = module.sn
+            main_func.dst_addr = module.addr
+            main_func.to_upgrade()
+
+            if main_func.upgrade_monitor_flag != -1:
+                select_cnt +=1
+                time.sleep(3)
+            else:
+                retry_times += 1
+                if(retry_times >= 1):
+                    break
+                logging.debug("one more try")
+                time.sleep(2)
+    else:
+        logging.debug(
+            "Failed to query the development board and is about to exit")
+
+
+    update_main_time2 = time.time()
+    logging.debug("--------------------------------------------------------------------------------------------------")
+    logging.debug("Upgrade: Finish, all use time:%.4fs" % (update_main_time2 - update_main_time1))
+
+    return 0
 
 
 # if __name__ == '__main__':

@@ -21,6 +21,7 @@ import lib_open_protocol.dji_crc as dji_crc
 import time
 import logging
 import math
+from PyQt5.QtCore import Qt, QUrl, QTimer, QThread, pyqtSignal, pyqtSlot, QObject
 
 SEND_PACKET_SIZE = 256
 
@@ -139,8 +140,11 @@ update_time_1 = 0
 update_time_2 = 0
 
 
-class Upgrade:
+class Upgrade(QObject):
+    upgrade_progress_signal = pyqtSignal(float)
+    
     def __init__(self, proto: OpenProto, logging):
+        super().__init__()
         self.proto = proto
         self.firmware = None
         self.erase_num = 0
@@ -310,6 +314,7 @@ class Upgrade:
             download_cnt += 1
             printProgress(download_cnt, packet_num,
                           prefix='Upgrade:', suffix=' ', barLength=50)
+            self.upgrade_progress_signal.emit(float(download_cnt/packet_num))
 
         # Step4: 发送传输完成
         self.upgrade_step = 4
