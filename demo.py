@@ -85,6 +85,7 @@ class WorkerThread(QThread):
             proto.open()
             proto.send_pack(module.addr, 0x0001, None, need_ack=False)
             proto.close()
+            print("重启完成")
             if ret[0]:
                 self.upgrade_monitor_flag = 255
             else:
@@ -100,7 +101,7 @@ class WorkerThread(QThread):
             "Upgrade: Select Addr:0x%04x, APP:0x%08x, BL:0x%08x, HWID:%s,%s, "
             % (module.addr, module.app_ver, module.loader_ver, module.hw_id, module.sn)
         )
-        self.fw_path = "./firmwares/glazer-maker-main-app-v10.0.0.1.bin"
+        self.fw_path = "./firmwares/glazer-maker-main-app-v10.0.0.2.bin"
         self.hwid = module.hw_id
         self.sn = module.sn
         self.dst_addr = module.addr
@@ -144,7 +145,7 @@ class WorkerThread(QThread):
     def recv_progress_val(self, float_val):
         """子线程接收主线程的信号并处理"""
         int_val = int(float_val * 100)
-        print(f"子线程收到消息: {float_val}")
+        print(f"固件发送进度: {int_val}")
         self.firmwareUpgradeInterface.node.set_progress(1, int(float_val * 100))
 
 
@@ -163,7 +164,7 @@ class Window(myFluentWindow):
         self.firmwareUpgradeInterface = FirmwareUpgradeInterface(self)
         self.initNavigation()
         self.initWindow()
-        self.comboBoxSerial.clicked.connect(self.select_port)  # 连接激活信号以选择串口
+        self.comboBoxSerial.activated.connect(self.select_port)
         self.pushButtonSerial.clicked.connect(self.open_or_close_serial)  # 连接激活信号以选择串口
         # 轮询串口，更新到串口选择器中
         self.timer_serial_list = QTimer()  # 创建定时器
@@ -206,7 +207,6 @@ class Window(myFluentWindow):
             if self.check_serial_port():
                 self.serial_is_open = True
                 self.pushButtonSerial.setText("关闭")  # 打开成功，设置按钮文字为“关闭”
-                self.select_port()
                 self.start_stop_query_signal.emit("start")
         else:  # 按下关闭串口
             self.serial_is_open = False
@@ -228,10 +228,21 @@ class Window(myFluentWindow):
         self.send_serial_port_signal.emit(self._selected_port)
 
     def update_serial_ports(self):
-        self.comboBoxSerial.clear()  # 清空现有选项
         ports = serial.tools.list_ports.comports()  # 获取串口列表
+        # 记录当前选中的串口值
+        current_selection = self.comboBoxSerial.currentText()
+        # 清空原来的项
+        self.comboBoxSerial.clear()
+
         for port in ports:
             self.comboBoxSerial.addItem(port.device)  # 将串口号添加到 ComboBox
+        # 如果当前选中的串口仍然存在列表中，保持选中状态
+        if current_selection in [self.comboBoxSerial.itemText(i) for i in range(self.comboBoxSerial.count())]:
+            index = self.comboBoxSerial.findText(current_selection)
+            self.comboBoxSerial.setCurrentIndex(index)
+        else:
+            # 如果当前选中的串口不在新的列表中，清空选中项或设置为默认项
+            self.comboBoxSerial.setCurrentIndex(-1)  # 设置为没有选中的状态，或者可以设置为一个默认串口
 
     def initNavigation(self):
         self.addSubInterface(self.firmwareConfigInterface, FIF.SETTING, "固件配置")

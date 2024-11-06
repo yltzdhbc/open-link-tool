@@ -293,7 +293,7 @@ class Upgrade(QObject):
             send_fields = UpgradeDataFields(
                 0, fw_pack_idx, fw_pack_size, module.sn_crc16, OpenProtoDataFields.to_c_array(fw_pack, SEND_PACKET_SIZE))
             ret_packs = self.proto.send_and_recv_ack_pack(
-                module.addr, UpgradeDataFields.CMD, send_fields.encode(), wait_time=1.5, retry=5)
+                module.addr, UpgradeDataFields.CMD, send_fields.encode(), wait_time=0.1, retry=5)
             if len(ret_packs) == 0:
                 self.logging.debug(
                     'Upgrade: Upgrade failed, no response to sending firmware data.')
@@ -312,8 +312,8 @@ class Upgrade(QObject):
             # self.logging.debug('Upgrade: Send firmware data successfully, idx:%d (%3.1f%%)' % (fw_pack_idx, 100 * float(fw_ptr)/len(self.firmware)))
             # self.logging.debug('Send idx:%d (%3.1f%%)' % (fw_pack_idx, 100 * float(fw_ptr)/len(self.firmware)))
             download_cnt += 1
-            printProgress(download_cnt, packet_num,
-                          prefix='Upgrade:', suffix=' ', barLength=50)
+            # printProgress(download_cnt, packet_num,
+            #               prefix='Upgrade:', suffix=' ', barLength=50)
             self.upgrade_progress_signal.emit(float(download_cnt/packet_num))
 
         # Step4: 发送传输完成
@@ -338,8 +338,8 @@ class Upgrade(QObject):
             return [False, ret_err]
 
         self.proto.close()
-        # self.logging.debug('Upgrade: Send firmware transfer complete command successfully')
-        # self.logging.debug('Upgrade: upgrade successed')
+        self.logging.debug('Upgrade: Send firmware transfer complete command successfully')
+        self.logging.debug('Upgrade: upgrade successed')
 
         global update_time_2
         update_time_2 = time.time()
