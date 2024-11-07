@@ -123,7 +123,7 @@
             <item>
              <widget class="BodyLabel" name="prepareFocusLabel">
               <property name="text">
-               <string>主控板</string>
+               <string>灯板</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -136,7 +136,7 @@
             <item>
              <widget class="BodyLabel" name="label">
               <property name="text">
-               <string>底板</string>
+               <string>主板</string>
               </property>
              </widget>
             </item>
@@ -146,7 +146,7 @@
             <item>
              <widget class="BodyLabel" name="label_2">
               <property name="text">
-               <string>灯板</string>
+               <string>底板</string>
               </property>
              </widget>
             </item>

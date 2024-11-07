@@ -124,9 +124,9 @@ class Ui_FirmwareConfigInterface(object):
         _translate = QtCore.QCoreApplication.translate
         FirmwareConfigInterface.setWindowTitle(_translate("FirmwareConfigInterface", "Form"))
         self.dailyProgressLabel.setText(_translate("FirmwareConfigInterface", "固件配置"))
-        self.prepareFocusLabel.setText(_translate("FirmwareConfigInterface", "主控板"))
-        self.label.setText(_translate("FirmwareConfigInterface", "底板"))
-        self.label_2.setText(_translate("FirmwareConfigInterface", "灯板"))
+        self.prepareFocusLabel.setText(_translate("FirmwareConfigInterface", "灯板"))
+        self.label.setText(_translate("FirmwareConfigInterface", "主板"))
+        self.label_2.setText(_translate("FirmwareConfigInterface", "底板"))
         self.yesterdayLabel.setText(_translate("FirmwareConfigInterface", "固件更新说明"))
         self.label_3.setText(_translate("FirmwareConfigInterface", "<html><head/><body><p>v10.0.0.1固件更新<br/>新增：</p><p>1、1111</p><p>2、2222</p><p>3、3333</p><p>修改：</p><p>1、111</p><p>2、222</p><p>3、333</p></body></html>"))
 from qfluentwidgets import BodyLabel, CardWidget, LineEdit, SubtitleLabel

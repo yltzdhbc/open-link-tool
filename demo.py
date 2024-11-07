@@ -18,12 +18,14 @@ import logging, serial
 from lib_open_protocol.open_protocol import OpenProto
 from lib_open_protocol.upgrade import Upgrade, ModuleInfoStruct
 import os
+from view.myConfig import userConfig
 
 LOCAL_ADDR = 0x0103
 
 
 class WorkerThread(QThread):
     update_signal = pyqtSignal(list)
+    set_upgrade_state_signal = pyqtSignal(int, str)
 
     def __init__(self, firmwareUpgradeInterface):
         super().__init__()
@@ -41,15 +43,20 @@ class WorkerThread(QThread):
         self.query_enable = False
         self.download_enable = False
         self.modules = None
+        self.selected_module_idx = 0
+        self.selected_module_message = None
+        self.selected_module_addr = None
+        self.selected_module = None
         self.firmwareUpgradeInterface = firmwareUpgradeInterface
 
     def run(self):
         while True:
             if self.query_enable:
                 self.serial_query_module()
+                time.sleep(1)
             elif self.download_enable == True:
                 self.download()
-            time.sleep(2)
+            time.sleep(1)
 
     def to_query(self):
         try:
@@ -62,6 +69,9 @@ class WorkerThread(QThread):
             logging.debug("Error", "Queried Faild")
             return False
 
+    def show_download_info(self, str):
+        self.set_upgrade_state_signal.emit(self.selected_module_idx, str)
+
     def to_upgrade(self):
         if not isinstance(self.dst_addr, int):
             logging.debug("dst_addr error")
@@ -72,20 +82,31 @@ class WorkerThread(QThread):
         try:
             proto = OpenProto(self.port, self.baud, LOCAL_ADDR, logging)
             # 查版本
+            self.set_upgrade_state_signal.emit(self.selected_module_idx, "查询版本")
             self.upgrade = Upgrade(proto, logging)
+            self.upgrade.download_info_signal.connect(self.show_download_info)
             # 绑定upgrade内的信号到本类中的函数，设置进度条
             self.upgrade.upgrade_progress_signal.connect(self.recv_progress_val)
             module = ModuleInfoStruct(0, 0, self.hwid, self.sn, self.dst_addr)
+            self.set_upgrade_state_signal.emit(self.selected_module_idx, "下载中")
             # 下载固件
             self.upgrade.load_firmware(self.fw_path)
             self.upgrade.erase_num = self.erase_num
             self.upgrade_monitor_flag = 1
             ret = self.upgrade.download(module)
+            self.set_upgrade_state_signal.emit(self.selected_module_idx, "下载完成")
             # 重启
             proto.open()
             proto.send_pack(module.addr, 0x0001, None, need_ack=False)
             proto.close()
             print("重启完成")
+
+            # 等待1S后重新开启查询
+            time.sleep(1)
+            self.query_enable = True
+
+            self.set_upgrade_state_signal.emit(self.selected_module_idx, "升级成功")
+
             if ret[0]:
                 self.upgrade_monitor_flag = 255
             else:
@@ -95,18 +116,39 @@ class WorkerThread(QThread):
             return
 
     def download(self):
-        module = self.modules[0]
-        logging.debug("Upgrade: Select module %d/%d" % (self.selected_idx + 1, len(self.modules)))
+        module = None
+        for temp_module in self.modules:
+            if temp_module.addr == self.selected_module_addr:
+                print(f"selected_module_addr : {hex(self.selected_module_addr)}")
+                print(f"selected_module_idx : {hex(self.selected_module_idx)}")
+                module = temp_module
+
+        # module = self.selected_module
+        # logging.debug("Upgrade: Select module %d/%d" % (self.selected_module_idx + 1, len(self.modules)))
         logging.debug(
             "Upgrade: Select Addr:0x%04x, APP:0x%08x, BL:0x%08x, HWID:%s,%s, "
             % (module.addr, module.app_ver, module.loader_ver, module.hw_id, module.sn)
         )
-        self.fw_path = "./firmwares/glazer-maker-main-app-v10.0.0.2.bin"
+        self.fw_path = self.get_module_fw_path(self.selected_module_idx)
+        if self.fw_path == None:
+            return
         self.hwid = module.hw_id
         self.sn = module.sn
         self.dst_addr = module.addr
         self.to_upgrade()
         self.download_enable = False
+
+    def get_module_fw_path(self, board_type):
+        config = userConfig()
+        if board_type == 0:
+            fw_path = config.config.get("Settings", "fw_path_light")
+        if board_type == 1:
+            fw_path = config.config.get("Settings", "fw_path_main")
+        if board_type == 2:
+            fw_path = config.config.get("Settings", "fw_path_bottom")
+        fw_path = "./firmwares/" + fw_path + ".bin"
+        print(f"get fw_path: {fw_path}")
+        return fw_path
 
     def serial_query_module(self):
         print("update_module_list")
@@ -117,7 +159,7 @@ class WorkerThread(QThread):
     @pyqtSlot(str)
     def send_serial_port(self, message):
         """子线程接收主线程的信号并处理"""
-        print(f"子线程收到消息: {message}")
+        print(f"子线程 send_serial_port 收到消息: {message}")
         self.port = message
 
     @pyqtSlot(str)
@@ -131,13 +173,17 @@ class WorkerThread(QThread):
     @pyqtSlot(str)
     def start_download(self, message):
         print(f"子线程收到消息: {message}")
-        self.selected_idx = 0
+        self.selected_module_message = message
+        self.selected_module_idx = 0
         if message == "Glazer-Module-1":
-            self.selected_idx = 0
+            self.selected_module_idx = 0
+            self.selected_module_addr = 0x0102
         elif message == "Glazer-Module-2":
-            self.selected_idx = 1
+            self.selected_module_idx = 1
+            self.selected_module_addr = 0x0100
         else:
-            selected_idx = 2
+            self.selected_module_idx = 2
+            self.selected_module_addr = 0x0101
         self.query_enable = False
         self.download_enable = True
 
@@ -146,7 +192,7 @@ class WorkerThread(QThread):
         """子线程接收主线程的信号并处理"""
         int_val = int(float_val * 100)
         print(f"固件发送进度: {int_val}")
-        self.firmwareUpgradeInterface.node.set_progress(1, int(float_val * 100))
+        self.firmwareUpgradeInterface.node.set_progress(self.selected_module_idx, int(float_val * 100))
 
 
 class Window(myFluentWindow):
@@ -156,6 +202,9 @@ class Window(myFluentWindow):
 
     def __init__(self):
         super().__init__()
+
+        self.userConfig = userConfig()
+        
         self._selected_port = None  # 私有变量用于存储选中的串口
         self.serial = None  # 串口对象
         self.serial_is_open = None  # 串口对象
@@ -166,15 +215,17 @@ class Window(myFluentWindow):
         self.initWindow()
         self.comboBoxSerial.activated.connect(self.select_port)
         self.pushButtonSerial.clicked.connect(self.open_or_close_serial)  # 连接激活信号以选择串口
-        # 轮询串口，更新到串口选择器中
-        self.timer_serial_list = QTimer()  # 创建定时器
-        self.timer_serial_list.timeout.connect(self.update_serial_ports)  # 连接定时器的超时信号
-        self.timer_serial_list.start(1000)
+
         # 初始化工作线程
         self.worker_thread = None
         self.start_task()
-
         self.firmwareUpgradeInterface.node.button_download_signal.connect(self.worker_thread.start_download)
+        # 轮询串口，更新到串口选择器中
+        self.update_serial_ports(first_init=True)
+        self.select_port()
+        self.timer_serial_list = QTimer()  # 创建定时器
+        self.timer_serial_list.timeout.connect(self.update_serial_ports)  # 连接定时器的超时信号
+        self.timer_serial_list.start(1000)
 
     def start_task(self):
         """启动工作线程"""
@@ -182,6 +233,9 @@ class Window(myFluentWindow):
             self.worker_thread = WorkerThread(self.firmwareUpgradeInterface)
             # 连接子线程的信号到主线程的槽函数
             self.worker_thread.update_signal.connect(self.update_module_lists)  # 连接信号
+            self.worker_thread.set_upgrade_state_signal.connect(
+                self.firmwareUpgradeInterface.node.set_upgrade_state_str
+            )
             # 连接主线程的信号到子线程的槽函数
             self.send_serial_port_signal.connect(self.worker_thread.send_serial_port)
             self.start_stop_query_signal.connect(self.worker_thread.start_or_stop_query)
@@ -198,9 +252,15 @@ class Window(myFluentWindow):
         print(f"num_of_modules: {num_of_modules}")
         for i in range(num_of_modules):
             if modules[i].addr == 0x0100:
-                self.firmwareUpgradeInterface.node.set_info(1, modules[i].app_ver, modules[i].loader_ver)
+                self.firmwareUpgradeInterface.node.set_selected_state(1)
+                self.firmwareUpgradeInterface.node.set_info(
+                    1, modules[i].app_ver, modules[i].loader_ver, modules[i].hw_id, modules[i].sn
+                )
             elif modules[i].addr == 0x0101:
-                self.firmwareUpgradeInterface.node.set_info(2, modules[i].app_ver, modules[i].loader_ver)
+                self.firmwareUpgradeInterface.node.set_selected_state(2)
+                self.firmwareUpgradeInterface.node.set_info(
+                    2, modules[i].app_ver, modules[i].loader_ver, modules[i].hw_id, modules[i].sn
+                )
 
     def open_or_close_serial(self):
         if self.pushButtonSerial.text() == "打开":  # 按下打开串口
@@ -226,13 +286,20 @@ class Window(myFluentWindow):
     def select_port(self):
         self._selected_port = self.comboBoxSerial.currentText()  # 获取当前选中的串口
         self.send_serial_port_signal.emit(self._selected_port)
+        self.userConfig.modify_config(self._selected_port)
+        print(f"_selected_port: {self._selected_port}")
 
-    def update_serial_ports(self):
+    def update_serial_ports(self, first_init=False):
         ports = serial.tools.list_ports.comports()  # 获取串口列表
         # 记录当前选中的串口值
         current_selection = self.comboBoxSerial.currentText()
-        # 清空原来的项
-        self.comboBoxSerial.clear()
+        if first_init == True:
+            com_name = self.userConfig.config.get("Settings", "com_name", fallback="Not Set")
+            current_selection = str(com_name)
+        else:
+            # 清空原来的项
+            self.comboBoxSerial.clear()
+        # print(f"current_selection: {current_selection}")
 
         for port in ports:
             self.comboBoxSerial.addItem(port.device)  # 将串口号添加到 ComboBox
@@ -245,9 +312,9 @@ class Window(myFluentWindow):
             self.comboBoxSerial.setCurrentIndex(-1)  # 设置为没有选中的状态，或者可以设置为一个默认串口
 
     def initNavigation(self):
-        self.addSubInterface(self.firmwareConfigInterface, FIF.SETTING, "固件配置")
-        self.navigationInterface.addSeparator()
         self.addSubInterface(self.firmwareUpgradeInterface, FIF.DOWNLOAD, "固件升级")
+        self.navigationInterface.addSeparator()
+        self.addSubInterface(self.firmwareConfigInterface, FIF.SETTING, "固件配置")
         self.navigationInterface.addSeparator()
         self.navigationInterface.setExpandWidth(150)  # 设置导航栏宽度
         self.navigationInterface.setCollapsible(False)  # 导航栏不可收缩
