@@ -99,7 +99,7 @@ class TreeNode(QObject):
             self._child_item.append(child_item)
 
     def on_button_clicked(self, name):
-        
+
         print(f"{name} button clicked!")
         idx = 0
         if name == "Glazer-Module-1":
@@ -113,8 +113,7 @@ class TreeNode(QObject):
         self.button_download_signal.emit(name)
         self.set_progress(idx, 0)
         # self._start_upload_button[idx].setDisabled(True)
-        
-        
+
     def set_button_state(self, idx, on_off):
         if on_off == 'off':
             self._start_upload_button[idx].setDisabled(True)
@@ -128,7 +127,7 @@ class TreeNode(QObject):
 
     def set_selected_state(self, child_index):
         child_item = self.item.child(child_index)
-        child_item.setSelected(True)
+        # child_item.setSelected(True)
 
     def set_upgrade_state_str(self, idx, str):
         print(f"set_upgrade_state_str: {str}")
@@ -137,11 +136,19 @@ class TreeNode(QObject):
 
         child_item = self.item.child(idx)
         child_item.setText(self.COL_STATE, str)
+        # child_item.setSelected(True)
+
+    def uint32_to_str(self, uint32):
+        a = (uint32 >> 24) & 0xFF  # 提取最高 8 位
+        b = (uint32 >> 16) & 0xFF  # 提取第二高 8 位
+        c = (uint32 >> 8) & 0xFF  # 提取第三高 8 位
+        d = uint32 & 0xFF  # 提取最低 8 位
+        return f"v{a}. {b}. {c}. {d}"
 
     def set_info(self, child_index, app_version, loader_version, HW, SN):
         child_item = self.item.child(child_index)
-        child_item.setText(self.COL_VER_APP, hex(app_version))
-        child_item.setText(self.COL_VER_LOADER, hex(loader_version))
+        child_item.setText(self.COL_VER_APP, self.uint32_to_str(app_version))
+        child_item.setText(self.COL_VER_LOADER, self.uint32_to_str(loader_version))
         # child_item.setText(self.COL_STR_HW, hex(HW))
         child_item.setText(self.COL_STR_SN, str(SN))
         print(
