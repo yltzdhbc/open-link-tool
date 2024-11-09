@@ -16,6 +16,7 @@
 from lib_open_protocol.open_protocol import OpenProto
 from ctypes import *
 import hashlib
+
 # import dji_crc
 import lib_open_protocol.dji_crc as dji_crc
 import time
@@ -207,17 +208,9 @@ class Upgrade(QObject):
         self.upgrade_step = 1
         send_fields = EnterLoaderFields(0, module.sn_crc16)
         self.proto.open()
-        # self.proto.send_pack(module.addr, EnterLoaderFields.CMD, send_fields.encode(), False)
-
-        # self.proto.close()
-        # # 等待3秒让APP切换到Loader，然后再发送一遍指令
-        # time.sleep(1)
-        # self.proto.open()
-
         ret_packs = self.proto.send_and_recv_ack_pack(
-            module.addr, EnterLoaderFields.CMD, send_fields.encode(), wait_time=0.5, retry=3
+            module.addr, EnterLoaderFields.CMD, send_fields.encode(), wait_time=1, retry=3
         )
-
         if len(ret_packs) == 0:
             self.logging.debug("Upgrade: The upgrade fails, and there is no response to the Loader command.")
             self.upgrade_error_str = "The upgrade fails, and there is no response to the Loader command."
@@ -229,16 +222,14 @@ class Upgrade(QObject):
             self.upgrade_error_str = "Upgrade failed, enter Loader error:0x%02x." % ret_err
             self.proto.close()
             return [False, ret_err]
-
         self.logging.debug("Upgrade: enter Loader success")
-
-        # 等待APP切换到Loader
         time.sleep(2)
-        self.download_info_signal.emit("发送信息")
+        
+        # 等待APP切换到Loader
+        self.download_info_signal.emit("Flash擦除")
 
         # Step2:发送待升级的固件信息
         self.erase_num = len(self.firmware)
-
         self.logging.debug("Upgrade: Step2!!! send firmware info")
         self.logging.debug("Upgrade: Flash erase size:%d(%.2fk)" % (self.erase_num, self.erase_num / 1024))
         self.upgrade_step = 2
@@ -247,11 +238,11 @@ class Upgrade(QObject):
             0, len(self.firmware), module.sn_crc16, OpenProtoDataFields.to_c_array(module.hw_id, 16), self.erase_num
         )
         ret_packs = self.proto.send_and_recv_ack_pack(
-            module.addr, UpgradeInfoFields.CMD, send_fields.encode(), wait_time=5, retry=5
+            module.addr, UpgradeInfoFields.CMD, send_fields.encode(), wait_time=5, retry=2
         )
         t2 = time.time()
-
         if len(ret_packs) == 0:
+            self.download_info_signal.emit("无响应")
             self.logging.debug("Upgrade: Upgrade failed, no response to sending firmware information.")
             self.upgrade_error_str = "Upgrade failed, no response to sending firmware information."
             self.proto.close()
@@ -262,7 +253,6 @@ class Upgrade(QObject):
             self.upgrade_error_str = "Failed to upgrade, failed to send firmware information:0x%02x." % ret_err
             self.proto.close()
             return [False, ret_err]
-
         self.logging.debug("Upgrade: Send firmware information successfully, Flash erase time:%.4fs" % (t2 - t1))
 
         # return 0
@@ -292,7 +282,7 @@ class Upgrade(QObject):
                 0, fw_pack_idx, fw_pack_size, module.sn_crc16, OpenProtoDataFields.to_c_array(fw_pack, SEND_PACKET_SIZE)
             )
             ret_packs = self.proto.send_and_recv_ack_pack(
-                module.addr, UpgradeDataFields.CMD, send_fields.encode(), wait_time=0.1, retry=5
+                module.addr, UpgradeDataFields.CMD, send_fields.encode(), wait_time=1, retry=5
             )
             if len(ret_packs) == 0:
                 self.logging.debug("Upgrade: Upgrade failed, no response to sending firmware data.")
@@ -314,7 +304,7 @@ class Upgrade(QObject):
             #               prefix='Upgrade:', suffix=' ', barLength=50)
             self.upgrade_progress_signal.emit(float(download_cnt / packet_num))
 
-        self.download_info_signal.emit("固件发送完成")
+        self.download_info_signal.emit("发送完成")
         # Step4: 发送传输完成
         self.upgrade_step = 4
         firmware_md5 = hashlib.md5(self.firmware).digest()

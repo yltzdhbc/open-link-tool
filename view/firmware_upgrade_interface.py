@@ -69,8 +69,23 @@ class TreeNode(QObject):
             self.item.addChild(child_item)
             # 创建子节点的按钮
             child_button = PushButton("升级")
-            child_button.setFont(QFont("Consoals", 10))  # 设置字体和大小
-            child_button.setStyleSheet("width: 100px;")
+            font = QFont("微软雅黑", 10)
+            child_button.setFont(font)  # 设置字体和大小
+            # 设置按钮的样式
+            child_button.setStyleSheet(
+                """
+                QPushButton {
+                    color: black;  /* 文字颜色为白色 */
+                    background-color: #29F1FF;  /* 激活状态下背景颜色为 #FFF129 */
+                    border: 0px solid #C0C0C0;  /* 设置边框颜色为浅灰色，宽度为2像素 */
+                    border-radius: 5px;  /* 设置圆角半径为15像素 */
+                }
+                QPushButton:disabled {
+                    color: darkgray;  /* 禁用状态下文字为深灰色 */
+                    background-color: lightgray;  /* 禁用状态下背景为浅灰色 */
+                }
+            """
+            )
             child_button.clicked.connect(lambda checked, index=i: self.on_button_clicked(f"{name}-Module-{index + 1}"))
             self.tree_widget.setItemWidget(child_item, self.COL_BUTTON, child_button)
             # 创建进度条并添加到子节点的第五列
@@ -84,6 +99,7 @@ class TreeNode(QObject):
             self._child_item.append(child_item)
 
     def on_button_clicked(self, name):
+        
         print(f"{name} button clicked!")
         idx = 0
         if name == "Glazer-Module-1":
@@ -93,9 +109,17 @@ class TreeNode(QObject):
         elif name == "Glazer-Module-3":
             idx = 2
         print(f"{idx} idx")
-        self.set_progress(idx, 0)
-        self._start_upload_button[idx].setDisabled(True)
+        self.set_upgrade_state_str(idx, '启动中')
         self.button_download_signal.emit(name)
+        self.set_progress(idx, 0)
+        # self._start_upload_button[idx].setDisabled(True)
+        
+        
+    def set_button_state(self, idx, on_off):
+        if on_off == 'off':
+            self._start_upload_button[idx].setDisabled(True)
+        else:
+            self._start_upload_button[idx].setEnabled(True)
 
     def set_progress(self, child_index, value):
         """设置指定子节点的进度条进度值"""

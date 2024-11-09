@@ -26,6 +26,9 @@ LOCAL_ADDR = 0x0103
 class WorkerThread(QThread):
     update_signal = pyqtSignal(list)
     set_upgrade_state_signal = pyqtSignal(int, str)
+    set_upgrade_button_single = pyqtSignal(int, str)
+    WORK_QUREY = 0
+    WORK_DOWNLOAD = 1
 
     def __init__(self, firmwareUpgradeInterface):
         super().__init__()
@@ -48,15 +51,21 @@ class WorkerThread(QThread):
         self.selected_module_addr = None
         self.selected_module = None
         self.firmwareUpgradeInterface = firmwareUpgradeInterface
+        self.work = 0
+        self.is_querying = False
+        self.thread_cnt = 0
 
     def run(self):
         while True:
-            if self.query_enable:
-                self.serial_query_module()
-                time.sleep(1)
-            elif self.download_enable == True:
+            if self.query_enable == True and self.download_enable == False:
+                self.thread_cnt += 1
+                if self.thread_cnt >= 10:
+                    self.thread_cnt = 0
+                    self.serial_query_module()
+            elif self.query_enable == False and self.download_enable == True:
                 self.download()
-            time.sleep(1)
+                self.thread_cnt = 0
+            time.sleep(0.1)
 
     def to_query(self):
         try:
@@ -93,29 +102,26 @@ class WorkerThread(QThread):
             self.upgrade.load_firmware(self.fw_path)
             self.upgrade.erase_num = self.erase_num
             self.upgrade_monitor_flag = 1
-            ret = self.upgrade.download(module)
-            self.set_upgrade_state_signal.emit(self.selected_module_idx, "下载完成")
-            # 重启
-            proto.open()
-            proto.send_pack(module.addr, 0x0001, None, need_ack=False)
-            proto.close()
-            print("重启完成")
+            ret, err = self.upgrade.download(module)
+            if ret == True:
+                self.set_upgrade_state_signal.emit(self.selected_module_idx, "下载完成")
+                # 发送重启指令
+                proto.open()
+                proto.send_pack(module.addr, 0x0001, None, need_ack=False)
+                proto.close()
+                print("重启完成")
+                self.set_upgrade_state_signal.emit(self.selected_module_idx, "升级成功")
+            else:
+                self.set_upgrade_state_signal.emit(self.selected_module_idx, "升级失败")
 
-            # 等待1S后重新开启查询
-            time.sleep(1)
             self.query_enable = True
 
-            self.set_upgrade_state_signal.emit(self.selected_module_idx, "升级成功")
-
-            if ret[0]:
-                self.upgrade_monitor_flag = 255
-            else:
-                self.upgrade_monitor_flag = -1
         except Exception as e:
             self.upgrade_monitor_flag = -1
             return
 
     def download(self):
+        self.set_upgrade_button_single.emit(self.selected_module_idx, "off")
         module = None
         for temp_module in self.modules:
             if temp_module.addr == self.selected_module_addr:
@@ -151,10 +157,12 @@ class WorkerThread(QThread):
         return fw_path
 
     def serial_query_module(self):
+        self.is_querying = True
         print("update_module_list")
         self.modules = self.to_query()
         if len(self.modules):
             self.update_signal.emit(self.modules)
+        self.is_querying = False
 
     @pyqtSlot(str)
     def send_serial_port(self, message):
@@ -169,9 +177,14 @@ class WorkerThread(QThread):
             self.query_enable = True
         else:
             self.query_enable = False
+        self.thread_cnt = 0
 
     @pyqtSlot(str)
     def start_download(self, message):
+        # while self.is_querying == True:
+        #     time.sleep(1)
+        self.query_enable = False
+        self.download_enable = True
         print(f"子线程收到消息: {message}")
         self.selected_module_message = message
         self.selected_module_idx = 0
@@ -184,8 +197,6 @@ class WorkerThread(QThread):
         else:
             self.selected_module_idx = 2
             self.selected_module_addr = 0x0101
-        self.query_enable = False
-        self.download_enable = True
 
     @pyqtSlot(float)
     def recv_progress_val(self, float_val):
@@ -204,7 +215,7 @@ class Window(myFluentWindow):
         super().__init__()
 
         self.userConfig = userConfig()
-        
+
         self._selected_port = None  # 私有变量用于存储选中的串口
         self.serial = None  # 串口对象
         self.serial_is_open = None  # 串口对象
@@ -236,6 +247,7 @@ class Window(myFluentWindow):
             self.worker_thread.set_upgrade_state_signal.connect(
                 self.firmwareUpgradeInterface.node.set_upgrade_state_str
             )
+            self.worker_thread.set_upgrade_button_single.connect(self.firmwareUpgradeInterface.node.set_button_state)
             # 连接主线程的信号到子线程的槽函数
             self.send_serial_port_signal.connect(self.worker_thread.send_serial_port)
             self.start_stop_query_signal.connect(self.worker_thread.start_or_stop_query)
