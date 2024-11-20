@@ -145,13 +145,7 @@ class WorkerThread(QThread):
         self.download_enable = False
 
     def get_module_fw_path(self, board_type):
-        config = userConfig()
-        if board_type == 0:
-            fw_path = config.config.get("Settings", "fw_path_light")
-        if board_type == 1:
-            fw_path = config.config.get("Settings", "fw_path_main")
-        if board_type == 2:
-            fw_path = config.config.get("Settings", "fw_path_bottom")
+        fw_path = self.userConfig.get_module_fwPath_by_moduleIdx(0, board_type)
         fw_path = "./firmwares/" + fw_path + ".bin"
         print(f"get fw_path: {fw_path}")
         return fw_path
@@ -181,22 +175,19 @@ class WorkerThread(QThread):
 
     @pyqtSlot(str)
     def start_download(self, message):
-        # while self.is_querying == True:
-        #     time.sleep(1)
         self.query_enable = False
         self.download_enable = True
-        print(f"子线程收到消息: {message}")
+        print(f"start_download: {message}")
         self.selected_module_message = message
         self.selected_module_idx = 0
-        if message == "Glazer-Module-1":
-            self.selected_module_idx = 0
-            self.selected_module_addr = 0x0102
-        elif message == "Glazer-Module-2":
-            self.selected_module_idx = 1
-            self.selected_module_addr = 0x0100
-        else:
-            self.selected_module_idx = 2
-            self.selected_module_addr = 0x0101
+        self.userConfig = userConfig()
+        machine_name, module_number, addr_list, name_list = self.userConfig.get_all_module_info_ofMachine(0)
+        target_idx = int(message)
+        self.selected_module_idx = target_idx
+        self.selected_module_addr = addr_list[self.selected_module_idx]
+        print(f"target_idx: {target_idx}")
+        print(f"selected_module_idx: {self.selected_module_idx}")
+        print(f"selected_module_addr: {self.selected_module_addr}")
 
     @pyqtSlot(float)
     def recv_progress_val(self, float_val):
@@ -215,6 +206,7 @@ class Window(myFluentWindow):
         super().__init__()
 
         self.userConfig = userConfig()
+        machine_name, module_number, addr_list, name_list = self.userConfig.get_all_module_info_ofMachine(0)
 
         self._selected_port = None  # 私有变量用于存储选中的串口
         self.serial = None  # 串口对象
@@ -222,6 +214,9 @@ class Window(myFluentWindow):
         # create sub interface
         self.firmwareConfigInterface = FirmwareConfigInterface(self)
         self.firmwareUpgradeInterface = FirmwareUpgradeInterface(self)
+
+        self.firmwareUpgradeInterface.createModuleTree(machine_name, module_number, name_list)
+
         self.initNavigation()
         self.initWindow()
         self.comboBoxSerial.activated.connect(self.select_port)
@@ -261,18 +256,19 @@ class Window(myFluentWindow):
 
     def update_module_lists(self, modules):
         num_of_modules = len(modules)
-        print(f"num_of_modules: {num_of_modules}")
+
+        machine_name, module_number, addr_list, name_list = self.userConfig.get_all_module_info_ofMachine(0)
+        print(f"num_of_modules: {num_of_modules}, module_number: {module_number}")
         for i in range(num_of_modules):
-            if modules[i].addr == 0x0100:
-                self.firmwareUpgradeInterface.node.set_selected_state(1)
-                self.firmwareUpgradeInterface.node.set_info(
-                    1, modules[i].app_ver, modules[i].loader_ver, modules[i].hw_id, modules[i].sn
-                )
-            elif modules[i].addr == 0x0101:
-                self.firmwareUpgradeInterface.node.set_selected_state(2)
-                self.firmwareUpgradeInterface.node.set_info(
-                    2, modules[i].app_ver, modules[i].loader_ver, modules[i].hw_id, modules[i].sn
-                )
+            for j in range(module_number):
+                print(f"i: {i}, j: {j}, modules[i].addr: {modules[i].addr}, addr_list[j]: {addr_list[j]}")
+                if modules[i].addr == addr_list[j]:
+
+                    self.firmwareUpgradeInterface.node.set_selected_state(j)
+                    self.firmwareUpgradeInterface.node.set_info(
+                        j, modules[i].app_ver, modules[i].loader_ver, modules[i].hw_id, modules[i].sn
+                    )
+                    return
 
     def open_or_close_serial(self):
         if self.pushButtonSerial.text() == "打开":  # 按下打开串口

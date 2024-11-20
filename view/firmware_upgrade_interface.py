@@ -86,7 +86,7 @@ class TreeNode(QObject):
                 }
             """
             )
-            child_button.clicked.connect(lambda checked, index=i: self.on_button_clicked(f"{name}-Module-{index + 1}"))
+            child_button.clicked.connect(lambda checked, index=i: self.on_button_clicked(f"{index}"))
             self.tree_widget.setItemWidget(child_item, self.COL_BUTTON, child_button)
             # 创建进度条并添加到子节点的第五列
             progress_bar = ProgressBar()
@@ -101,21 +101,15 @@ class TreeNode(QObject):
     def on_button_clicked(self, name):
 
         print(f"{name} button clicked!")
-        idx = 0
-        if name == "Glazer-Module-1":
-            idx = 0
-        elif name == "Glazer-Module-2":
-            idx = 1
-        elif name == "Glazer-Module-3":
-            idx = 2
-        print(f"{idx} idx")
-        self.set_upgrade_state_str(idx, '启动中')
+        idx = int(name)
+        print(f"idx: {idx}")
+        self.set_upgrade_state_str(idx, "启动中")
         self.button_download_signal.emit(name)
         self.set_progress(idx, 0)
         # self._start_upload_button[idx].setDisabled(True)
 
     def set_button_state(self, idx, on_off):
-        if on_off == 'off':
+        if on_off == "off":
             self._start_upload_button[idx].setDisabled(True)
         else:
             self._start_upload_button[idx].setEnabled(True)
@@ -130,7 +124,7 @@ class TreeNode(QObject):
         # child_item.setSelected(True)
 
     def set_upgrade_state_str(self, idx, str):
-        print(f"set_upgrade_state_str: {str}")
+        print(f"set_upgrade_state_str: {str}, idx:{idx}")
         # if str == "升级成功":
         #     self._start_upload_button[idx].setEnabled(True)
 
@@ -177,21 +171,14 @@ class FirmwareUpgradeInterface(Ui_FirmwareUpgradeInterface, QWidget):
         # name app loader HW SN 按钮 进度 状态 保留
         self.treeWidget.setHeaderLabels(["名称", "App版本", "Loader版本", "SN", "升级", "状态", "进度"])
 
+    def createModuleTree(self, root_name, child_num, child_name):
         # 添加根节点和子节点
         self.node = TreeNode(self.treeWidget, None)
-        self.node.create_info_list("Glazer", 3)
-
-        self.node.set_progress(0, 0)
-        self.node.set_progress(1, 0)
-        self.node.set_progress(2, 0)
-
-        self.node._child_item[0].setText(self.node.COL_TREE_NAME, "灯板-0x0102")
-        self.node._child_item[1].setText(self.node.COL_TREE_NAME, "主板-0x0100")
-        self.node._child_item[2].setText(self.node.COL_TREE_NAME, "底板-0x0101")
-
-        for i in range(3):
+        self.node.create_info_list(root_name, child_num)
+        for i in range(child_num):
+            self.node.set_progress(i, 0)
+            self.node._child_item[i].setText(self.node.COL_TREE_NAME, child_name[i])
             self.node._start_upload_button[i].setDisabled(True)
-
         # 默认展开所有节点
         self.treeWidget.expandAll()
         # 设置第一列宽度

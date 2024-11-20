@@ -107,6 +107,13 @@
               </property>
              </spacer>
             </item>
+            <item>
+             <widget class="PushButton" name="pushButton_saveConfig">
+              <property name="text">
+               <string>保存</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
           <item>
@@ -121,37 +128,104 @@
              <number>15</number>
             </property>
             <item>
-             <widget class="BodyLabel" name="prepareFocusLabel">
-              <property name="text">
-               <string>灯板</string>
+             <widget class="SubtitleLabel" name="label_0">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>30</height>
+               </size>
               </property>
-              <property name="alignment">
-               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+              <property name="text">
+               <string>MACHINE-1</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="LineEdit" name="lineEdit"/>
-            </item>
-            <item>
-             <widget class="BodyLabel" name="label">
-              <property name="text">
-               <string>主板</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="LineEdit" name="lineEdit_2"/>
-            </item>
-            <item>
-             <widget class="BodyLabel" name="label_2">
-              <property name="text">
-               <string>底板</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="LineEdit" name="lineEdit_3"/>
+             <layout class="QGridLayout" name="gridLayout">
+              <item row="2" column="0">
+               <widget class="BodyLabel" name="label_module_0">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>30</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>MODULE1</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="LineEdit" name="lineEdit_0"/>
+              </item>
+              <item row="4" column="1">
+               <widget class="LineEdit" name="lineEdit_2"/>
+              </item>
+              <item row="3" column="0">
+               <widget class="BodyLabel" name="label_module_1">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>30</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>MODULE2</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="BodyLabel" name="label_module_2">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>30</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>MODULE3</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="1">
+               <widget class="LineEdit" name="lineEdit_4"/>
+              </item>
+              <item row="3" column="1">
+               <widget class="LineEdit" name="lineEdit_1"/>
+              </item>
+              <item row="5" column="1">
+               <widget class="LineEdit" name="lineEdit_3"/>
+              </item>
+              <item row="5" column="0">
+               <widget class="BodyLabel" name="label_module_3">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>30</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>MODULE4</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0">
+               <widget class="BodyLabel" name="label_module_4">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>30</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>MODULE5</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
            </layout>
           </item>
@@ -317,6 +391,11 @@
   <customwidget>
    <class>LineEdit</class>
    <extends>QLineEdit</extends>
+   <header>qfluentwidgets</header>
+  </customwidget>
+  <customwidget>
+   <class>PushButton</class>
+   <extends>QPushButton</extends>
    <header>qfluentwidgets</header>
   </customwidget>
  </customwidgets>
