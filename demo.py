@@ -154,8 +154,7 @@ class WorkerThread(QThread):
         self.is_querying = True
         print("update_module_list")
         self.modules = self.to_query()
-        if len(self.modules):
-            self.update_signal.emit(self.modules)
+        self.update_signal.emit(self.modules)
         self.is_querying = False
 
     @pyqtSlot(str)
@@ -256,19 +255,23 @@ class Window(myFluentWindow):
 
     def update_module_lists(self, modules):
         num_of_modules = len(modules)
-
         machine_name, module_number, addr_list, name_list = self.userConfig.get_all_module_info_ofMachine(0)
         print(f"num_of_modules: {num_of_modules}, module_number: {module_number}")
+        module_state = list(0 for _ in range(module_number))
         for i in range(num_of_modules):
             for j in range(module_number):
                 print(f"i: {i}, j: {j}, modules[i].addr: {modules[i].addr}, addr_list[j]: {addr_list[j]}")
                 if modules[i].addr == addr_list[j]:
-
-                    self.firmwareUpgradeInterface.node.set_selected_state(j)
-                    self.firmwareUpgradeInterface.node.set_info(
-                        j, modules[i].app_ver, modules[i].loader_ver, modules[i].hw_id, modules[i].sn
-                    )
-                    return
+                    module_state[j] = 1
+        print(f"module_state: {module_state}")
+        for j in range(module_number):
+            if module_state[j] == 1:
+                self.firmwareUpgradeInterface.node.set_button_state(j, "on")
+                self.firmwareUpgradeInterface.node.set_info(
+                    j, modules[i].app_ver, modules[i].loader_ver, modules[i].hw_id, modules[i].sn
+                )
+            else:
+                self.firmwareUpgradeInterface.node.set_button_state(j, "off")
 
     def open_or_close_serial(self):
         if self.pushButtonSerial.text() == "打开":  # 按下打开串口
@@ -280,6 +283,11 @@ class Window(myFluentWindow):
             self.serial_is_open = False
             self.pushButtonSerial.setText("打开")
             self.start_stop_query_signal.emit("stop")
+            # 关闭所有选项中的按钮，设置为不可按下
+            machine_name, module_number, addr_list, name_list = self.userConfig.get_all_module_info_ofMachine(0)
+            for j in range(module_number):
+                self.firmwareUpgradeInterface.node.set_button_state(j, "off")
+                
             print(f"已关闭串口")
 
     def check_serial_port(self):

@@ -159,6 +159,6 @@ class Ui_FirmwareConfigInterface(object):
         self.label_module_3.setText(_translate("FirmwareConfigInterface", "MODULE4"))
         self.label_module_4.setText(_translate("FirmwareConfigInterface", "MODULE5"))
         self.yesterdayLabel.setText(_translate("FirmwareConfigInterface", "固件更新说明"))
-        self.label_3.setText(_translate("FirmwareConfigInterface", "<html><head/><body><p>v10.0.0.1固件更新<br/>新增：</p><p>1、1111</p><p>2、2222</p><p>3、3333</p><p>修改：</p><p>1、111</p><p>2、222</p><p>3、333</p></body></html>"))
+        self.label_3.setText(_translate("FirmwareConfigInterface", "<html><head/><body><p>v10.0.0.1 Beta</p></body></html>"))
 from qfluentwidgets import BodyLabel, CardWidget, LineEdit, PushButton, SubtitleLabel
 import resource_rc

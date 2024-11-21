@@ -20,9 +20,6 @@ class userConfig:
             print(f"{self.config_file} 不存在，正在创建默认配置文件。")
             self.config.add_section("Settings")
             self.config.set("Settings", "com_name", "COM1")
-            self.config.set("Settings", "fw_path_light", "none")
-            self.config.set("Settings", "fw_path_main", "none")
-            self.config.set("Settings", "fw_path_bottom", "none")
 
             self.config.add_section("User")
             self.config.set("User", "username", "admin")
