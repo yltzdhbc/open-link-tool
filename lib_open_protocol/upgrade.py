@@ -158,7 +158,8 @@ class Upgrade(QObject):
         update_time_1 = time.time()
 
         self.proto.open()
-        ret_packs = self.proto.send_and_recv_ack_pack(0xFFFF, QueryVerFields.CMD, None, True, dst_only_one=False)
+        ret_packs = self.proto.send_and_recv_ack_pack(0xFFFF, QueryVerFields.CMD, None, wait_time=0.5, retry=1, dst_only_one=False)
+        
         self.proto.close()
 
         self.logging.debug("Upgrade: Query version start")

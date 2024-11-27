@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QStyledItemDelegate,
     QProgressBar,
+    QLabel,
 )
 from qfluentwidgets import (
     FluentIcon,
@@ -21,6 +22,7 @@ from qfluentwidgets import (
     PushButton,
     PrimaryPushButton,
     ProgressBar,
+    BodyLabel,
 )
 
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QFont
@@ -61,6 +63,7 @@ class TreeNode(QObject):
         # 创建子节点
         self.progress_bars = []
         self._start_upload_button = []
+        self._status_label = []
         self._child_item = []
         # 创建子节点
         for i in range(child_count):  # name app loader HW SN 按钮 进度 状态 保留
@@ -86,6 +89,19 @@ class TreeNode(QObject):
                 }
             """
             )
+            status_label = QLabel('')
+            status_label.setStyleSheet("""
+                QLabel {
+                    color: white;                          /* 文字颜色为白色 */
+                    background-color: #3498db;             /* 背景颜色（浅蓝色） */
+                    font-size: 10pt;                        /* 字体大小为 10 */
+                    font-family: 'Microsoft YaHei';         /* 字体为微软雅黑 */
+                    padding: 1px;                          /* 增加内边距，让文字不贴边 */
+                    border-radius: 15px;                    /* 设置圆角效果 */
+                 }
+            """)
+            status_label.setAutoFillBackground(True)
+            self.tree_widget.setItemWidget(child_item, self.COL_STATE, status_label)
             child_button.clicked.connect(lambda checked, index=i: self.on_button_clicked(f"{index}"))
             self.tree_widget.setItemWidget(child_item, self.COL_BUTTON, child_button)
             # 创建进度条并添加到子节点的第五列
@@ -97,6 +113,7 @@ class TreeNode(QObject):
             self.progress_bars.append(progress_bar)
             self._start_upload_button.append(child_button)
             self._child_item.append(child_item)
+            self._status_label.append(status_label)
 
     def on_button_clicked(self, name):
 
@@ -119,17 +136,15 @@ class TreeNode(QObject):
         if 0 <= child_index < len(self.progress_bars):
             self.progress_bars[child_index].setValue(value)
 
-    def set_selected_state(self, child_index):
+    def set_selected_state(self, child_index, on_off):
         child_item = self.item.child(child_index)
-        # child_item.setSelected(True)
+        child_item.setSelected(on_off)
 
     def set_upgrade_state_str(self, idx, str):
         print(f"set_upgrade_state_str: {str}, idx:{idx}")
-        # if str == "升级成功":
-        #     self._start_upload_button[idx].setEnabled(True)
-
-        child_item = self.item.child(idx)
-        child_item.setText(self.COL_STATE, str)
+        # child_item = self.item.child(idx)
+        # child_item.setText(self.COL_STATE, str)
+        self._status_label[idx].setText(str)
         # child_item.setSelected(True)
 
     def uint32_to_str(self, uint32):
@@ -145,10 +160,11 @@ class TreeNode(QObject):
         child_item.setText(self.COL_VER_LOADER, self.uint32_to_str(loader_version))
         # child_item.setText(self.COL_STR_HW, hex(HW))
         child_item.setText(self.COL_STR_SN, str(SN))
+        self.set_selected_state(child_index, True)
         print(
             f" {child_item.text(0)} | {child_item.text(1)} | {child_item.text(2)} | {child_item.text(3)} | {child_item.text(4)}"
         )
-        self._start_upload_button[child_index].setEnabled(True)
+        # self._start_upload_button[child_index].setEnabled(True)
 
     def remove(self):
         index = self.tree_widget.indexOfTopLevelItem(self.item)
@@ -179,6 +195,7 @@ class FirmwareUpgradeInterface(Ui_FirmwareUpgradeInterface, QWidget):
             self.node.set_progress(i, 0)
             self.node._child_item[i].setText(self.node.COL_TREE_NAME, child_name[i])
             self.node._start_upload_button[i].setDisabled(True)
+            
         # 默认展开所有节点
         self.treeWidget.expandAll()
         # 设置第一列宽度
