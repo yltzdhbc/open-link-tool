@@ -23,6 +23,9 @@ LOCAL_ADDR = 0x0103
 
 
 class Window(myFluentWindow):
+    import ctypes
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("starter")
+        
     ui_update_info_sig = pyqtSignal(list)
     ui_update_state_sig = pyqtSignal(str)
     ui_update_btn_sig = pyqtSignal(int, str)
@@ -262,7 +265,7 @@ class Window(myFluentWindow):
 
     def initWindow(self):
         self.resize(900, 700)
-        self.setWindowIcon(QIcon(":/qfluentwidgets/images/logo.png"))
+        self.setWindowIcon(QIcon("./resource/images/open-link-icon@4x.png"))
         self.setWindowTitle("OPEN-LINK TOOL")
         desktop = QApplication.desktop().availableGeometry()
         w, h = desktop.width(), desktop.height()
