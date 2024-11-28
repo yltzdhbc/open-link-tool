@@ -26,6 +26,7 @@ class Window(myFluentWindow):
     ui_update_info_sig = pyqtSignal(list)
     ui_update_state_sig = pyqtSignal(str)
     ui_update_btn_sig = pyqtSignal(int, str)
+    ui_update_selected_state_sig = pyqtSignal(int, str)
     
     WORK_MODE_IDLE = 0
     WORK_MODE_QUERY = 1
@@ -61,6 +62,7 @@ class Window(myFluentWindow):
         self.ui_update_info_sig.connect(self.update_module_lists)
         self.ui_update_state_sig.connect(self.upload_info_str_set)
         self.ui_update_btn_sig.connect(self.firmwareUpgradeInterface.node.set_button_state)
+        self.ui_update_selected_state_sig.connect(self.firmwareUpgradeInterface.node.set_selected_state)
         self.baud = "921600"
         self.erase_num = None
         self.modules = None
@@ -82,6 +84,7 @@ class Window(myFluentWindow):
                 self.update_serial_ports()
                 for j in range(self.module_number):
                     self.ui_update_btn_sig.emit(j, "off")
+                    self.ui_update_selected_state_sig.emit(j, "off")
             elif self._work_mode == self.WORK_MODE_QUERY:
                 # print("WORK_MODE_QUERY")
                 self.modules = self.to_query()
@@ -105,7 +108,6 @@ class Window(myFluentWindow):
 
     def to_download(self):
         self.ui_update_btn_sig.emit(self.selected_module_idx, "off")
-        # self.firmwareUpgradeInterface.node.set_button_state(self.selected_module_idx, "off")
         module = None
         for temp_module in self.modules:
             if temp_module.addr == self.selected_module_addr:

@@ -47,10 +47,12 @@ class TreeNode(QObject):
         super().__init__()
         self.tree_widget = tree_widget
         self.parent_item = parent_item
+        self.child_num = 0
 
     def create_info_list(self, name, child_count):
         # 创建根节点
         self.item = QTreeWidgetItem(self.parent_item, [name, "", "", ""])
+        self.child_num = child_count
 
         self.item.setDisabled(True)
         self.tree_widget.addTopLevelItem(self.item)
@@ -78,29 +80,28 @@ class TreeNode(QObject):
             child_button.setStyleSheet(
                 """
                 QPushButton {
-                    color: black;  /* 文字颜色为白色 */
-                    background-color: #29F1FF;  /* 激活状态下背景颜色为 #FFF129 */
-                    border: 0px solid #C0C0C0;  /* 设置边框颜色为浅灰色，宽度为2像素 */
-                    border-radius: 5px;  /* 设置圆角半径为15像素 */
+                    color: black;                   /* 文字颜色为白色 */
+                    background-color: #29F1FF;      /* 激活状态下背景颜色为 #FFF129 */
+                    border: 0px solid #C0C0C0;      /* 设置边框颜色为浅灰色，宽度为2像素 */
+                    border-radius: 0px;             /* 设置圆角半径为15像素 */
                 }
                 QPushButton:disabled {
-                    color: darkgray;  /* 禁用状态下文字为深灰色 */
-                    background-color: lightgray;  /* 禁用状态下背景为浅灰色 */
+                    color: darkgray;                /* 禁用状态下文字为深灰色 */
+                    background-color: lightgray;    /* 禁用状态下背景为浅灰色 */
                 }
             """
             )
             status_label = QLabel('')
+            status_label.setAlignment(Qt.AlignCenter)
             status_label.setStyleSheet("""
                 QLabel {
-                    color: white;                          /* 文字颜色为白色 */
-                    background-color: #3498db;             /* 背景颜色（浅蓝色） */
-                    font-size: 10pt;                        /* 字体大小为 10 */
-                    font-family: 'Microsoft YaHei';         /* 字体为微软雅黑 */
-                    padding: 1px;                          /* 增加内边距，让文字不贴边 */
-                    border-radius: 15px;                    /* 设置圆角效果 */
+                    color: white;                   /* 文字颜色为白色 */
+                    background-color: #575757;      /* 背景颜色（浅灰色-选中状态） #272727(非选中状态)*/
+                    font-size: 10pt;                /* 字体大小为 10 */
+                    font-family: 'Microsoft YaHei'; /* 字体为微软雅黑 */
                  }
             """)
-            status_label.setAutoFillBackground(True)
+        
             self.tree_widget.setItemWidget(child_item, self.COL_STATE, status_label)
             child_button.clicked.connect(lambda checked, index=i: self.on_button_clicked(f"{index}"))
             self.tree_widget.setItemWidget(child_item, self.COL_BUTTON, child_button)
@@ -136,16 +137,41 @@ class TreeNode(QObject):
         if 0 <= child_index < len(self.progress_bars):
             self.progress_bars[child_index].setValue(value)
 
-    def set_selected_state(self, child_index, on_off):
-        child_item = self.item.child(child_index)
-        child_item.setSelected(on_off)
+    def set_selected_state(self, idx, on_off):
+        """设置某一行的选中状态"""
+        if on_off == "off":
+            status = False
+            self._status_label[idx].setStyleSheet("""
+                QLabel {
+                    color: white;                   /* 文字颜色为白色 */
+                    background-color: #272727;      /* 背景颜色（浅灰色-选中状态） #272727(非选中状态)*/
+                    font-size: 10pt;                /* 字体大小为 10 */
+                    font-family: 'Microsoft YaHei'; /* 字体为微软雅黑 */
+                 }
+            """)
+        else:
+            status = True
+            self._status_label[idx].setStyleSheet("""
+                QLabel {
+                    color: white;                   /* 文字颜色为白色 */
+                    background-color: #575757;      /* 背景颜色（浅灰色-选中状态） #272727(非选中状态)*/
+                    font-size: 10pt;                /* 字体大小为 10 */
+                    font-family: 'Microsoft YaHei'; /* 字体为微软雅黑 */
+                 }
+            """)
+            
+        if idx == -1:
+            for i in range(self.child_num):
+                child_item = self.item.child(idx)
+                child_item.setSelected(status)
+        else:
+            child_item = self.item.child(idx)
+            child_item.setSelected(status)
+
 
     def set_upgrade_state_str(self, idx, str):
         print(f"set_upgrade_state_str: {str}, idx:{idx}")
-        # child_item = self.item.child(idx)
-        # child_item.setText(self.COL_STATE, str)
         self._status_label[idx].setText(str)
-        # child_item.setSelected(True)
 
     def uint32_to_str(self, uint32):
         a = (uint32 >> 24) & 0xFF  # 提取最高 8 位
@@ -195,7 +221,6 @@ class FirmwareUpgradeInterface(Ui_FirmwareUpgradeInterface, QWidget):
             self.node.set_progress(i, 0)
             self.node._child_item[i].setText(self.node.COL_TREE_NAME, child_name[i])
             self.node._start_upload_button[i].setDisabled(True)
-            
         # 默认展开所有节点
         self.treeWidget.expandAll()
         # 设置第一列宽度
